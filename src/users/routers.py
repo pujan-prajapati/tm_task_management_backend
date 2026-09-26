@@ -1,8 +1,17 @@
-from fastapi import APIRouter, Depends, status, Request, BackgroundTasks
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    UploadFile,
+    status,
+    BackgroundTasks,
+)
 from sqlalchemy.orm import Session
 from src.users.dtos import UserSchema, UserResponseSchema, LoginSchema
 from src.users import controllers
 from src.utils.db import get_db
+from src.utils.helpers import is_authenticated
+from src.users.models import UserModel
 
 user_routes = APIRouter(prefix="/users")
 
@@ -23,9 +32,11 @@ def login(body: LoginSchema, db: Session = Depends(get_db)):
     return controllers.login(body, db)
 
 
-# is authenticated
-@user_routes.get(
-    "/is_auth", response_model=UserResponseSchema, status_code=status.HTTP_200_OK
-)
-def is_auth(request: Request, db: Session = Depends(get_db)):
-    return controllers.is_authenticated(request, db)
+# =============== upload avatar ==============================
+@user_routes.post("/upload-avatar", status_code=status.HTTP_200_OK)
+def upload_avatar(
+    file: UploadFile = File(...),
+    user: UserModel = Depends(is_authenticated),
+    db: Session = Depends(get_db),
+):
+    return controllers.upload_avatar(file, user, db)

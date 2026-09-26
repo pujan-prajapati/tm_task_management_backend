@@ -12,3 +12,5 @@ class UserModel(Base):
     hash_password: Mapped[str] = mapped_column(String, nullable=False)
     email: Mapped[str] = mapped_column(String, unique=True)
     phone: Mapped[str] = mapped_column(String, unique=True)
+
+    avatar: Mapped[str | None] = mapped_column(String, nullable=True)

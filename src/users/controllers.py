@@ -1,13 +1,18 @@
-from fastapi import HTTPException, status, BackgroundTasks
-from src.users.dtos import UserSchema
-from sqlalchemy.orm import Session
-from src.users.models import UserModel
-from pwdlib import PasswordHash
-from src.utils.settings import settings
+from fastapi import HTTPException, status, BackgroundTasks, UploadFile
 from datetime import datetime, timedelta
-from src.utils.mail import send_email
+
 from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from src.utils.settings import settings
+from src.utils.mail import send_email
+from src.utils.upload import save_file, delete_file
+
+from src.users.dtos import UserSchema
+from src.users.models import UserModel
+
 import jwt
+from pwdlib import PasswordHash
 
 password_hash = PasswordHash.recommended()
 
@@ -60,7 +65,7 @@ async def register(body: UserSchema, bg_task: BackgroundTasks, db: Session):
     return new_user
 
 
-# login user
+# ============= login user ==================================
 def login(body: UserSchema, db: Session):
     # check if user exists or not
     query = select(UserModel).where(UserModel.username == body.username)
@@ -85,3 +90,24 @@ def login(body: UserSchema, db: Session):
     )
 
     return {"token": token}
+
+
+# ============= upload avatar =================================
+def upload_avatar(file: UploadFile, user: UserModel, db: Session):
+    if user.avatar:
+        delete_file(user.avatar, "media/avatars")
+
+    filename = save_file(
+        file=file,
+        folder="media/avatars",
+    )
+
+    user.avatar = filename
+
+    db.commit()
+    db.refresh(user)
+
+    return {
+        "message": "Avatar uploaded successfully",
+        "avatar": filename,
+    }
