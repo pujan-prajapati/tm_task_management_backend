@@ -6,30 +6,35 @@ from pwdlib import PasswordHash
 from src.utils.settings import settings
 from datetime import datetime, timedelta
 from src.utils.mail import send_email
+from sqlalchemy import select
 import jwt
 
 password_hash = PasswordHash.recommended()
 
 
-# password hash function
+# ============== password hash function ============================
 def get_password_hash(password):
     return password_hash.hash(password)
 
 
-# verfiy password function
+# ============= verfiy password function ===============================
 def verify_password(plain_password, hashed_password):
     return password_hash.verify(plain_password, hashed_password)
 
 
-# register user
+# ============= register user ===================================
 async def register(body: UserSchema, bg_task: BackgroundTasks, db: Session):
     # check if user already exists with username
-    user = db.query(UserModel).filter(UserModel.username == body.username).first()
+    query = select(UserModel).where(UserModel.username == body.username)
+    user = db.scalar(query)
+
     if user:
         raise HTTPException(400, detail="Username Already Exists")
 
     # check if user already exists with email
-    email = db.query(UserModel).filter(UserModel.email == body.email).first()
+    query = select(UserModel).where(UserModel.email == body.email)
+    email = db.scalar(query)
+
     if email:
         raise HTTPException(400, detail="Email Already Exists")
 
@@ -58,7 +63,9 @@ async def register(body: UserSchema, bg_task: BackgroundTasks, db: Session):
 # login user
 def login(body: UserSchema, db: Session):
     # check if user exists or not
-    user = db.query(UserModel).filter(UserModel.username == body.username).first()
+    query = select(UserModel).where(UserModel.username == body.username)
+    user = db.scalar(query)
+
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Credentials"
