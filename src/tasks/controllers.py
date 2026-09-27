@@ -1,6 +1,6 @@
 from fastapi import HTTPException, status
 
-from sqlalchemy import or_, asc, desc, select
+from sqlalchemy import or_, asc, desc, select, func
 from sqlalchemy.orm import Session
 
 from src.tasks.dtos import TaskSchema, AddTagSchema
@@ -35,7 +35,7 @@ def get_all_tasks(
     order: str = "asc",
     page: int = 1,
     limit: int = 10,
-    tag_id: int | None = None,
+    tag_ids: list[int] | None = None,
 ):
     query = select(TaskModel).where(TaskModel.user_id == user.id)
 
@@ -49,8 +49,15 @@ def get_all_tasks(
         )
 
     # tag id ------------------
-    if tag_id:
-        query = query.join(TaskModel.tags).where(TagModel.id == tag_id)
+    if tag_ids:
+        query = (
+            query.join(TaskModel.tags)
+            .where(TagModel.id.in_(tag_ids))
+            .group_by(TaskModel.id)
+            .having(func.count(TagModel.id) == len(tag_ids))
+        )
+    # if tag_id:
+    #     query = query.join(TaskModel.tags).where(TagModel.id == tag_id)
 
     # sorting --------------
     allowed_sort_fields = {

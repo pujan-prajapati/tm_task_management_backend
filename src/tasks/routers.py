@@ -39,10 +39,10 @@ def get_all_tasks(
     order: str = Query("asc"),
     page: int = Query(1, ge=1),
     limit: int = Query(10, ge=1, le=100),
-    tag_id: int | None = None,
+    tag_ids: list[int] | None = None,
 ):
     return controllers.get_all_tasks(
-        db, user, search, sort_by, order, page, limit, tag_id
+        db, user, search, sort_by, order, page, limit, tag_ids
     )
 
 

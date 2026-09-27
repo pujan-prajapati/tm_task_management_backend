@@ -26,3 +26,56 @@ def create_tag(body: TagSchema, db: Session):
     db.refresh(new_tag)
 
     return new_tag
+
+
+# ============== GET ALL TAGS ==================
+def get_all_tags(db: Session):
+    query = select(TagModel)
+    tags = db.execute(query).scalars().all()
+
+    return tags
+
+
+# =============== GET ONE TAG =================
+def get_one_tag(tag_id: int, db: Session):
+    tag = db.get(TagModel, tag_id)
+
+    if not tag:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Tag Not Found"
+        )
+
+    return tag
+
+
+# ============= UPDATE TAG ====================
+def update_tag(tag_id: int, body: TagSchema, db: Session):
+    tag = db.get(TagModel, tag_id)
+
+    if not tag:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Tag Not Found"
+        )
+
+    tag.name = body.name
+
+    db.add(tag)
+    db.commit()
+    db.refresh(tag)
+
+    return tag
+
+
+# ============= DELETE TAG ====================
+def delete_tag(tag_id: int, db: Session):
+    tag = db.get(TagModel, tag_id)
+
+    if not tag:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Tag Not Found"
+        )
+
+    db.delete(tag)
+    db.commit()
+
+    return None
