@@ -1,9 +1,13 @@
 from fastapi import HTTPException, status
-from src.tasks.dtos import TaskSchema
-from sqlalchemy.orm import Session
-from src.tasks.models import TaskModel
-from src.users.models import UserModel
+
 from sqlalchemy import or_, asc, desc, select
+from sqlalchemy.orm import Session
+
+from src.tasks.dtos import TaskSchema, AddTagSchema
+from src.tasks.models import TaskModel
+from src.tags.models import TagModel
+
+from src.users.models import UserModel
 
 
 # =========== create task =======================
@@ -31,6 +35,7 @@ def get_all_tasks(
     order: str = "asc",
     page: int = 1,
     limit: int = 10,
+    tag_id: int | None = None,
 ):
     query = select(TaskModel).where(TaskModel.user_id == user.id)
 
@@ -42,6 +47,10 @@ def get_all_tasks(
                 TaskModel.description.ilike(f"%{search}%"),
             )
         )
+
+    # tag id ------------------
+    if tag_id:
+        query = query.join(TaskModel.tags).where(TagModel.id == tag_id)
 
     # sorting --------------
     allowed_sort_fields = {
@@ -116,6 +125,69 @@ def delete_task(task_id: int, db: Session, user: UserModel):
         )
 
     db.delete(task)
+    db.commit()
+
+    return None
+
+
+# ====================== add tags to task ==========================
+def add_tags_to_task(task_id: int, body: AddTagSchema, db: Session, user: UserModel):
+    task = db.get(TaskModel, task_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Task Id {task_id} not found"
+        )
+
+    if task.user_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="You are not authorized"
+        )
+
+    for tag_id in body.tag_ids:
+        tag = db.get(TagModel, tag_id)
+
+        if not tag:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Tag Id {tag_id} not found",
+            )
+
+        task.tags.append(tag)
+
+    db.commit()
+    db.refresh(task)
+
+    return task
+
+
+# ================ DELETE TAG FROM TASK
+def delete_tag_from_task(task_id: int, tag_id: int, db: Session, user: UserModel):
+    task = db.get(TaskModel, task_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task Not Found"
+        )
+
+    if task.user_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="You Are UnAuthorized"
+        )
+
+    tag = db.get(TagModel, tag_id)
+
+    if not tag:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task Not Found"
+        )
+
+    if tag not in task.tags:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tag is not attached to this task",
+        )
+
+    task.tags.remove(tag)
+
     db.commit()
 
     return None

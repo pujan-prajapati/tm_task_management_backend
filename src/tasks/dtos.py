@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class TaskSchema(BaseModel):
@@ -13,3 +13,13 @@ class TaskResponseSchema(BaseModel):
     description: str
     is_completed: bool
     user_id: int
+    tags: list[TagResponseSchema] = Field(default_factory=list)
+
+
+class AddTagSchema(BaseModel):
+    tag_ids: list[int]
+
+
+class TagResponseSchema(BaseModel):
+    id: int
+    name: str

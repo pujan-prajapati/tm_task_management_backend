@@ -1,6 +1,10 @@
 from sqlalchemy import String, Boolean, ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from src.tags.models import TagModel
+
 from src.utils.db import Base
+from src.utils.associations import task_tags
 
 
 class TaskModel(Base):
@@ -13,4 +17,8 @@ class TaskModel(Base):
 
     user_id: Mapped[int] = mapped_column(
         ForeignKey("user_table.id", ondelete="CASCADE")
+    )
+
+    tags: Mapped[list["TagModel"]] = relationship(
+        secondary=task_tags, back_populates="tasks"
     )

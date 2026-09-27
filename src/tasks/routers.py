@@ -1,11 +1,14 @@
+from typing import List
+
 from fastapi import APIRouter, Depends, status, Query
+from sqlalchemy.orm import Session
+
 from src.tasks import controllers
-from src.tasks.dtos import TaskSchema, TaskResponseSchema
+from src.tasks.dtos import TaskSchema, TaskResponseSchema, AddTagSchema
+from src.users.models import UserModel
+
 from src.utils.db import get_db
 from src.utils.helpers import is_authenticated
-from sqlalchemy.orm import Session
-from src.users.models import UserModel
-from typing import List
 
 task_routes = APIRouter(prefix="/tasks")
 
@@ -36,8 +39,11 @@ def get_all_tasks(
     order: str = Query("asc"),
     page: int = Query(1, ge=1),
     limit: int = Query(10, ge=1, le=100),
+    tag_id: int | None = None,
 ):
-    return controllers.get_all_tasks(db, user, search, sort_by, order, page, limit)
+    return controllers.get_all_tasks(
+        db, user, search, sort_by, order, page, limit, tag_id
+    )
 
 
 # =============== get one task =======================
@@ -75,3 +81,33 @@ def delete_task(
     user: UserModel = Depends(is_authenticated),
 ):
     return controllers.delete_task(task_id, db, user)
+
+
+# ================ ADD TAGS TO TASK ======================
+@task_routes.post(
+    "/{task_id}/tags",
+    response_model=TaskResponseSchema,
+    status_code=status.HTTP_201_CREATED,
+)
+def add_tags_to_task(
+    task_id: int,
+    body: AddTagSchema,
+    db: Session = Depends(get_db),
+    user: UserModel = Depends(is_authenticated),
+):
+    return controllers.add_tags_to_task(task_id, body, db, user)
+
+
+# ================= DELETE TAG FROM TASK ==========================
+@task_routes.delete(
+    "/{task_id}/tags/{tag_id}",
+    response_model=None,
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_tag_from_task(
+    task_id: int,
+    tag_id: int,
+    db: Session = Depends(get_db),
+    user: UserModel = Depends(is_authenticated),
+):
+    return controllers.delete_tag_from_task(task_id, tag_id, db, user)
