@@ -19,3 +19,11 @@ class UserResponseSchema(BaseModel):
 class LoginSchema(BaseModel):
     username: str
     password: str
+
+
+class LoginResponseSchema(BaseModel):
+    token: str
+
+
+class AvatarResponseSchema(BaseModel):
+    avatar: str

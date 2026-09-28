@@ -1,21 +1,30 @@
-from typing import List
-
 from fastapi import APIRouter, Depends, status, Query
 from sqlalchemy.orm import Session
 
 from src.tasks import controllers
-from src.tasks.dtos import TaskSchema, TaskResponseSchema, AddTagSchema
-from src.users.models import UserModel
+from src.tasks.dtos import (
+    TaskSchema,
+    TaskResponseSchema,
+    AddTagSchema,
+    TaskPriority,
+    TaskStatus,
+    TaskListResponseSchema,
+)
 
-from src.utils.db import get_db
-from src.utils.helpers import is_authenticated
+from src.users.models import UserModel
+from src.utils.dtos import SuccessResponse
+
+from src.core.db import get_db
+from src.dependencies.is_authenticated import is_authenticated
 
 task_routes = APIRouter(prefix="/tasks")
 
 
 # ============== create task ====================
 @task_routes.post(
-    "/", response_model=TaskResponseSchema, status_code=status.HTTP_201_CREATED
+    "/",
+    response_model=SuccessResponse[TaskResponseSchema],
+    status_code=status.HTTP_201_CREATED,
 )
 def create_task(
     body: TaskSchema,
@@ -28,7 +37,7 @@ def create_task(
 # =================== get all tasks ==================
 @task_routes.get(
     "/",
-    response_model=List[TaskResponseSchema],
+    response_model=SuccessResponse[TaskListResponseSchema],
     status_code=status.HTTP_200_OK,
 )
 def get_all_tasks(
@@ -37,18 +46,33 @@ def get_all_tasks(
     search: str | None = None,
     sort_by: str = Query("id"),
     order: str = Query("asc"),
-    page: int = Query(1, ge=1),
+    page: int = Query(1, ge=1, le=100),
     limit: int = Query(10, ge=1, le=100),
     tag_ids: list[int] | None = None,
+    priority: TaskPriority | None = None,
+    status: TaskStatus | None = None,
+    category_id: int | None = None,
 ):
     return controllers.get_all_tasks(
-        db, user, search, sort_by, order, page, limit, tag_ids
+        db,
+        user,
+        search,
+        sort_by,
+        order,
+        page,
+        limit,
+        tag_ids,
+        priority,
+        status,
+        category_id,
     )
 
 
 # =============== get one task =======================
 @task_routes.get(
-    "/{task_id}", response_model=TaskResponseSchema, status_code=status.HTTP_200_OK
+    "/{task_id}",
+    response_model=SuccessResponse[TaskResponseSchema],
+    status_code=status.HTTP_200_OK,
 )
 def get_one_task(
     task_id: int,
@@ -60,7 +84,9 @@ def get_one_task(
 
 # ================= update task ==========================
 @task_routes.put(
-    "/{task_id}", response_model=TaskResponseSchema, status_code=status.HTTP_201_CREATED
+    "/{task_id}",
+    response_model=SuccessResponse[TaskResponseSchema],
+    status_code=status.HTTP_201_CREATED,
 )
 def update_task(
     body: TaskSchema,
@@ -73,7 +99,9 @@ def update_task(
 
 # ================= delete task ===========================
 @task_routes.delete(
-    "/{task_id}", response_model=None, status_code=status.HTTP_204_NO_CONTENT
+    "/{task_id}",
+    response_model=None,
+    status_code=status.HTTP_204_NO_CONTENT,
 )
 def delete_task(
     task_id: int,
@@ -86,7 +114,7 @@ def delete_task(
 # ================ ADD TAGS TO TASK ======================
 @task_routes.post(
     "/{task_id}/tags",
-    response_model=TaskResponseSchema,
+    response_model=SuccessResponse[TaskResponseSchema],
     status_code=status.HTTP_201_CREATED,
 )
 def add_tags_to_task(

@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session
 from src.tags.dtos import TagSchema
 from src.tags.models import TagModel
 
+from src.utils.helpers import success_response
+
 
 # ============== CREATE TAG ==================
 def create_tag(body: TagSchema, db: Session):
@@ -25,7 +27,7 @@ def create_tag(body: TagSchema, db: Session):
     db.commit()
     db.refresh(new_tag)
 
-    return new_tag
+    return success_response(data=new_tag, message="Tag Created Successfully")
 
 
 # ============== GET ALL TAGS ==================
@@ -33,7 +35,7 @@ def get_all_tags(db: Session):
     query = select(TagModel)
     tags = db.execute(query).scalars().all()
 
-    return tags
+    return success_response(data=tags, message="All Tag Fetched Successfully")
 
 
 # =============== GET ONE TAG =================
@@ -45,7 +47,7 @@ def get_one_tag(tag_id: int, db: Session):
             status_code=status.HTTP_404_NOT_FOUND, detail="Tag Not Found"
         )
 
-    return tag
+    return success_response(data=tag, message="Tag Fetched Successfully")
 
 
 # ============= UPDATE TAG ====================
@@ -63,7 +65,7 @@ def update_tag(tag_id: int, body: TagSchema, db: Session):
     db.commit()
     db.refresh(tag)
 
-    return tag
+    return success_response(data=tag, message="Tag Updated Successfully")
 
 
 # ============= DELETE TAG ====================
@@ -78,4 +80,4 @@ def delete_tag(tag_id: int, db: Session):
     db.delete(tag)
     db.commit()
 
-    return None
+    return success_response(data=None, message="Tag Deleted Successfully")

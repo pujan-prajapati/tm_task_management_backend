@@ -1,32 +1,55 @@
+import math
+
 from fastapi import HTTPException, status
 
 from sqlalchemy import or_, asc, desc, select, func
-from sqlalchemy.orm import Session
-
-from src.tasks.dtos import TaskSchema, AddTagSchema
-from src.tasks.models import TaskModel
-from src.tags.models import TagModel
+from sqlalchemy.orm import Session, selectinload
 
 from src.users.models import UserModel
+from src.tags.models import TagModel
+from src.categories.models import CategoryModel
+
+from src.tasks.models import TaskModel
+from src.tasks.dtos import TaskSchema, AddTagSchema, TaskStatus, TaskPriority
+
+from src.utils.helpers import success_response
 
 
-# =========== create task =======================
+# =========== CREATE TASK =======================
 def create_task(body: TaskSchema, db: Session, user: UserModel):
-    data = body.model_dump()
+
+    if body.category_id is not None:
+        category = db.get(CategoryModel, body.category_id)
+
+        if not category:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Category Id {body.category_id} not found",
+            )
+
+        if category.user_id != user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You are not authorized to use this category",
+            )
+
     new_task = TaskModel(
-        title=data["title"],
-        description=data["description"],
-        is_completed=data["is_completed"],
+        title=body.title,
+        description=body.description,
+        priority=body.priority,
+        status=body.status,
         user_id=user.id,
+        category_id=body.category_id,
     )
+
     db.add(new_task)
     db.commit()
     db.refresh(new_task)
 
-    return new_task
+    return success_response(data=new_task, message="Task Created Successfully")
 
 
-# ============== get all tasks =============================
+# ============== GET ALL TASKS =============================
 def get_all_tasks(
     db: Session,
     user: UserModel,
@@ -36,8 +59,15 @@ def get_all_tasks(
     page: int = 1,
     limit: int = 10,
     tag_ids: list[int] | None = None,
+    priority: TaskPriority | None = None,
+    status: TaskStatus | None = None,
+    category_id: int | None = None,
 ):
-    query = select(TaskModel).where(TaskModel.user_id == user.id)
+    query = (
+        select(TaskModel)
+        .options(selectinload(TaskModel.tags))
+        .where(TaskModel.user_id == user.id)
+    )
 
     # search --------------
     if search:
@@ -48,6 +78,18 @@ def get_all_tasks(
             )
         )
 
+    # status --------------
+    if status:
+        query = query.where(TaskModel.status == status)
+
+    # priority --------------
+    if priority:
+        query = query.where(TaskModel.priority == priority)
+
+    # category id --------------
+    if category_id:
+        query = query.where(TaskModel.category_id == category_id)
+
     # tag id ------------------
     if tag_ids:
         query = (
@@ -56,14 +98,16 @@ def get_all_tasks(
             .group_by(TaskModel.id)
             .having(func.count(TagModel.id) == len(tag_ids))
         )
-    # if tag_id:
-    #     query = query.join(TaskModel.tags).where(TagModel.id == tag_id)
 
-    # sorting --------------
+    # total tasks
+    total = db.scalar(select(func.count()).select_from(query.subquery()))
+
+    # sorting and ordering --------------
     allowed_sort_fields = {
         "id": TaskModel.id,
         "title": TaskModel.title,
-        "is_completed": TaskModel.is_completed,
+        "priority": TaskModel.priority,
+        "status": TaskModel.status,
     }
 
     sort_column = allowed_sort_fields.get(sort_by, TaskModel.id)
@@ -75,13 +119,26 @@ def get_all_tasks(
 
     # pagination ---------------
     offset = (page - 1) * limit
-
     query = query.offset(offset).limit(limit)
 
-    return db.scalars(query).all()
+    tasks = db.scalars(query).all()
+
+    # Total pages -----------------
+    total_pages = math.ceil(total / limit)
+
+    return success_response(
+        data={
+            "items": tasks,
+            "page": page,
+            "limit": limit,
+            "total": total,
+            "total_page": total_pages,
+        },
+        message="All Task Fetched Successfully",
+    )
 
 
-# ============== get one task ===============================
+# ============== GET ONE TASK ===============================
 def get_one_task(task_id: int, db: Session, user: UserModel):
     task = db.get(TaskModel, task_id)
 
@@ -90,13 +147,13 @@ def get_one_task(task_id: int, db: Session, user: UserModel):
 
     if task.user_id != user.id:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="You are not authorized"
+            status_code=status.HTTP_403_FORBIDDEN, detail="You are not authorized"
         )
 
-    return task
+    return success_response(data=task, message="Task Fetched Successfully")
 
 
-# ============== update task ============================
+# ============== UPDATE TASK ============================
 def update_task(body: TaskSchema, task_id: int, db: Session, user: UserModel):
     task = db.get(TaskModel, task_id)
 
@@ -105,21 +162,37 @@ def update_task(body: TaskSchema, task_id: int, db: Session, user: UserModel):
 
     if task.user_id != user.id:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="You are not authorized"
+            status_code=status.HTTP_403_FORBIDDEN, detail="You are not authorized"
         )
 
-    body = body.model_dump()
+    if body.category_id is not None:
+        category = db.get(CategoryModel, body.category_id)
 
-    for field, value in body.items():
-        setattr(task, field, value)
+        if not category:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Category Id {body.category_id} not found",
+            )
+
+        if category.user_id != user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You are not authorized to use this category",
+            )
+
+    task.title = body.title
+    task.description = body.description
+    task.priority = body.priority
+    task.status = body.status
+    task.category_id = body.category_id
 
     db.commit()
     db.refresh(task)
 
-    return task
+    return success_response(data=task, message="Task Updated Successfully")
 
 
-# ====================== delete task ================================
+# ====================== DELETE TASK ================================
 def delete_task(task_id: int, db: Session, user: UserModel):
     task = db.get(TaskModel, task_id)
 
@@ -128,16 +201,16 @@ def delete_task(task_id: int, db: Session, user: UserModel):
 
     if task.user_id != user.id:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="You are not authorized"
+            status_code=status.HTTP_403_FORBIDDEN, detail="You are not authorized"
         )
 
     db.delete(task)
     db.commit()
 
-    return None
+    return success_response(data=None, message="Task Deleted Successfully")
 
 
-# ====================== add tags to task ==========================
+# ====================== ADD TAGS TO TASK ==========================
 def add_tags_to_task(task_id: int, body: AddTagSchema, db: Session, user: UserModel):
     task = db.get(TaskModel, task_id)
     if not task:
@@ -147,7 +220,7 @@ def add_tags_to_task(task_id: int, body: AddTagSchema, db: Session, user: UserMo
 
     if task.user_id != user.id:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="You are not authorized"
+            status_code=status.HTTP_403_FORBIDDEN, detail="You are not authorized"
         )
 
     for tag_id in body.tag_ids:
@@ -162,12 +235,13 @@ def add_tags_to_task(task_id: int, body: AddTagSchema, db: Session, user: UserMo
         task.tags.append(tag)
 
     db.commit()
+
     db.refresh(task)
 
-    return task
+    return success_response(data=task, message="Tag Added To Task Successfully")
 
 
-# ================ DELETE TAG FROM TASK
+# ================ DELETE TAG FROM TASK ================================
 def delete_tag_from_task(task_id: int, tag_id: int, db: Session, user: UserModel):
     task = db.get(TaskModel, task_id)
     if not task:
@@ -177,7 +251,7 @@ def delete_tag_from_task(task_id: int, tag_id: int, db: Session, user: UserModel
 
     if task.user_id != user.id:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="You Are UnAuthorized"
+            status_code=status.HTTP_403_FORBIDDEN, detail="You Are UnAuthorized"
         )
 
     tag = db.get(TagModel, tag_id)
@@ -197,4 +271,4 @@ def delete_tag_from_task(task_id: int, tag_id: int, db: Session, user: UserModel
 
     db.commit()
 
-    return None
+    return success_response(data=None, message="Tag Removed from Task")

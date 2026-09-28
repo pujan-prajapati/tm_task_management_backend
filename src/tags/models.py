@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from src.utils.db import Base
+from src.core.db import Base
 from src.utils.associations import task_tags
 
 if TYPE_CHECKING:

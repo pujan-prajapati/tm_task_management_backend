@@ -4,11 +4,13 @@ from datetime import datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from src.utils.settings import settings
+from src.core.settings import settings
+
 from src.utils.mail import send_email
 from src.utils.upload import save_file, delete_file
+from src.utils.helpers import success_response
 
-from src.users.dtos import UserSchema
+from src.users.dtos import UserSchema, LoginSchema
 from src.users.models import UserModel
 
 import jwt
@@ -62,11 +64,11 @@ async def register(body: UserSchema, bg_task: BackgroundTasks, db: Session):
     # send email confirmation
     bg_task.add_task(send_email, [new_user.email])
 
-    return new_user
+    return success_response(data=new_user, message="User Registered Successfully")
 
 
 # ============= login user ==================================
-def login(body: UserSchema, db: Session):
+def login(body: LoginSchema, db: Session):
     # check if user exists or not
     query = select(UserModel).where(UserModel.username == body.username)
     user = db.scalar(query)
@@ -89,7 +91,7 @@ def login(body: UserSchema, db: Session):
         settings.ALGORITHM,
     )
 
-    return {"token": token}
+    return success_response(data={"token": token}, message="Login Successful")
 
 
 # ============= upload avatar =================================
@@ -107,7 +109,6 @@ def upload_avatar(file: UploadFile, user: UserModel, db: Session):
     db.commit()
     db.refresh(user)
 
-    return {
-        "message": "Avatar uploaded successfully",
-        "avatar": filename,
-    }
+    return success_response(
+        data={"avatar": filename}, message="Avatar uploaded successfully"
+    )

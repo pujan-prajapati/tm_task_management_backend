@@ -1,5 +1,5 @@
 from sqlalchemy import Table, Column, ForeignKey
-from src.utils.db import Base
+from src.core.db import Base
 
 task_tags = Table(
     "task_tags",

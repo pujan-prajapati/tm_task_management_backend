@@ -1,4 +1,4 @@
-from src.utils.db import LocalSession
+from src.core.db import LocalSession
 from src.users.models import UserModel
 from src.users.controllers import get_password_hash
 from src.tasks.models import TaskModel
