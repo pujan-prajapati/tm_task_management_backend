@@ -22,15 +22,15 @@ from src.core.db import get_db
 from src.dependencies.is_authenticated import is_authenticated
 
 from src.users.models import UserModel
-from src.utils.dtos import SuccessResponse
+from src.utils.dtos import ResponseSchema
 
-user_routes = APIRouter(prefix="/users")
+user_routes = APIRouter(prefix="/users", tags=["Users"])
 
 
 # =============== register user ==========================
 @user_routes.post(
     "/register",
-    response_model=SuccessResponse[UserResponseSchema],
+    response_model=ResponseSchema[UserResponseSchema],
     status_code=status.HTTP_201_CREATED,
 )
 async def register(
@@ -42,7 +42,7 @@ async def register(
 # =============== login user ==============================
 @user_routes.post(
     "/login",
-    response_model=SuccessResponse[LoginResponseSchema],
+    response_model=ResponseSchema[LoginResponseSchema],
     status_code=status.HTTP_200_OK,
 )
 def login(body: LoginSchema, db: Session = Depends(get_db)):
@@ -52,7 +52,7 @@ def login(body: LoginSchema, db: Session = Depends(get_db)):
 # =============== upload avatar ==============================
 @user_routes.post(
     "/upload-avatar",
-    response_model=SuccessResponse[AvatarResponseSchema],
+    response_model=ResponseSchema[AvatarResponseSchema],
     status_code=status.HTTP_200_OK,
 )
 def upload_avatar(

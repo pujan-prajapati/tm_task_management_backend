@@ -1,0 +1,127 @@
+from fastapi import HTTPException, status
+from sqlalchemy.orm import Session
+from sqlalchemy import select
+
+from src.comments.dtos import CommentSchema
+from src.comments.models import CommentModel
+from src.users.models import UserModel
+from src.tasks.models import TaskModel
+
+from src.utils.helpers import check_task_access, success_response
+
+
+# =================== CREATE COMMENT =========================
+def create_comment(body: CommentSchema, task_id: int, db: Session, user: UserModel):
+    task = db.get(TaskModel, task_id)
+
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
+
+    check_task_access(task, user)
+
+    new_comment = CommentModel(content=body.content, task_id=task_id, user_id=user.id)
+
+    db.add(new_comment)
+    db.commit()
+    db.refresh(new_comment)
+
+    return success_response(data=new_comment, message="Comment Created Successfully")
+
+
+# ================ GET TASK COMMENTS ============================
+def get_task_comments(task_id: int, db: Session, user: UserModel):
+    task = db.get(TaskModel, task_id)
+
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task Not Found"
+        )
+
+    check_task_access(task, user)
+
+    query = (
+        select(CommentModel)
+        .where(CommentModel.task_id == task_id)
+        .order_by(CommentModel.id.asc())
+    )
+    comments = db.scalars(query).all()
+
+    return success_response(data=comments, message="Comments Fetched Successfully")
+
+
+# ================ UPDATE COMMENTS ============================
+def update_comment(
+    task_id: int, comment_id: int, body: CommentSchema, db: Session, user: UserModel
+):
+    task = db.get(TaskModel, task_id)
+
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Tas Not Found"
+        )
+
+    check_task_access(task, user)
+
+    comment = db.get(CommentModel, comment_id)
+
+    if not comment:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Comment Not Found"
+        )
+
+    if comment.task_id != task.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Comment Does Not Belog To This Task",
+        )
+
+    if comment.user_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="You Can Only Update Your Own Comment",
+        )
+
+    comment.content = body.content
+
+    db.commit()
+    db.refresh(comment)
+
+    return success_response(data=comment, message="Comment Updated Successfully")
+
+
+# ================ DELETE COMMENTS ============================
+def delete_comment(task_id: int, comment_id: int, db: Session, user: UserModel):
+    task = db.get(TaskModel, task_id)
+
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Tas Not Found"
+        )
+
+    check_task_access(task, user)
+
+    comment = db.get(CommentModel, comment_id)
+
+    if not comment:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Comment Not Found"
+        )
+
+    if comment.task_id != task.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Comment Does Not Belog To This Task",
+        )
+
+    if comment.user_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="You Can Only Delete Your Own Comment",
+        )
+
+    db.delete(comment)
+    db.commit()
+
+    return success_response(data=None, message="Comment Deleted Successfully")

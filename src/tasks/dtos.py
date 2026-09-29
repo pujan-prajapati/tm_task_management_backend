@@ -16,6 +16,13 @@ class TaskStatus(str, Enum):
     COMPLETED = "completed"
 
 
+class TagResponseSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+
+
 class TaskSchema(BaseModel):
     title: str
     description: str
@@ -54,3 +61,7 @@ class TaskListResponseSchema(BaseModel):
     limit: int
     total: int
     total_page: int
+
+
+class AssignTaskSchema(BaseModel):
+    user_id: int

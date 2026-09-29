@@ -5,7 +5,6 @@ from sqlalchemy.orm import Session
 
 from src.tags.dtos import TagSchema
 from src.tags.models import TagModel
-
 from src.utils.helpers import success_response
 
 
@@ -27,7 +26,7 @@ def create_tag(body: TagSchema, db: Session):
     db.commit()
     db.refresh(new_tag)
 
-    return success_response(data=new_tag, message="Tag Created Successfully")
+    return success_response(new_tag, "Tag created successfully")
 
 
 # ============== GET ALL TAGS ==================
@@ -35,7 +34,7 @@ def get_all_tags(db: Session):
     query = select(TagModel)
     tags = db.execute(query).scalars().all()
 
-    return success_response(data=tags, message="All Tag Fetched Successfully")
+    return success_response(tags, "Tags fetched successfully")
 
 
 # =============== GET ONE TAG =================
@@ -47,7 +46,7 @@ def get_one_tag(tag_id: int, db: Session):
             status_code=status.HTTP_404_NOT_FOUND, detail="Tag Not Found"
         )
 
-    return success_response(data=tag, message="Tag Fetched Successfully")
+    return success_response(tag, "Tag fetched successfully")
 
 
 # ============= UPDATE TAG ====================
@@ -65,7 +64,7 @@ def update_tag(tag_id: int, body: TagSchema, db: Session):
     db.commit()
     db.refresh(tag)
 
-    return success_response(data=tag, message="Tag Updated Successfully")
+    return success_response(tag, "Tag updated successfully")
 
 
 # ============= DELETE TAG ====================
@@ -80,4 +79,4 @@ def delete_tag(tag_id: int, db: Session):
     db.delete(tag)
     db.commit()
 
-    return success_response(data=None, message="Tag Deleted Successfully")
+    return success_response(None, "Tag deleted successfully")

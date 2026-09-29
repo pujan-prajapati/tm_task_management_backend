@@ -2,10 +2,10 @@ from typing import Generic, TypeVar
 
 from pydantic import BaseModel
 
-T = TypeVar("T")
+ResponseData = TypeVar("ResponseData")
 
 
-class SuccessResponse(BaseModel, Generic[T]):
-    success: bool = True
+class ResponseSchema(BaseModel, Generic[ResponseData]):
+    data: ResponseData | None
+    success: bool
     message: str
-    data: T | None = None

@@ -7,15 +7,15 @@ from src.tags import controllers
 from src.tags.dtos import TagSchema, TagResponseSchema
 
 from src.core.db import get_db
-from src.utils.dtos import SuccessResponse
+from src.utils.dtos import ResponseSchema
 
-tag_routes = APIRouter(prefix="/tags")
+tag_routes = APIRouter(prefix="/tags", tags=["Tags"])
 
 
 # ================ CREATE TAG ==================
 @tag_routes.post(
     "/",
-    response_model=SuccessResponse[TagResponseSchema],
+    response_model=ResponseSchema[TagResponseSchema],
     status_code=status.HTTP_201_CREATED,
 )
 def create_tag(
@@ -28,7 +28,7 @@ def create_tag(
 # ================ GET ALL TAG ==================
 @tag_routes.get(
     "/",
-    response_model=SuccessResponse[List[TagResponseSchema]],
+    response_model=ResponseSchema[List[TagResponseSchema]],
     status_code=status.HTTP_200_OK,
 )
 def get_tag(db: Session = Depends(get_db)):
@@ -38,7 +38,7 @@ def get_tag(db: Session = Depends(get_db)):
 # ================ GET ONE TAG ==================
 @tag_routes.get(
     "/{tag_id}",
-    response_model=SuccessResponse[TagResponseSchema],
+    response_model=ResponseSchema[TagResponseSchema],
     status_code=status.HTTP_200_OK,
 )
 def get_one_tag(tag_id: int, db: Session = Depends(get_db)):
@@ -48,7 +48,7 @@ def get_one_tag(tag_id: int, db: Session = Depends(get_db)):
 # ================ UPDATE TAG ==================
 @tag_routes.put(
     "/{tag_id}",
-    response_model=SuccessResponse[TagResponseSchema],
+    response_model=ResponseSchema[TagResponseSchema],
     status_code=status.HTTP_200_OK,
 )
 def update_tag(tag_id: int, body: TagSchema, db: Session = Depends(get_db)):
@@ -58,8 +58,8 @@ def update_tag(tag_id: int, body: TagSchema, db: Session = Depends(get_db)):
 # ================ DELETE TAG ==================
 @tag_routes.delete(
     "/{tag_id}",
-    response_model=None,
-    status_code=status.HTTP_204_NO_CONTENT,
+    response_model=ResponseSchema[None],
+    status_code=status.HTTP_200_OK,
 )
 def delete_tag(tag_id: int, db: Session = Depends(get_db)):
     return controllers.delete_tag(tag_id, db)

@@ -7,7 +7,6 @@ from src.categories.dtos import CategorySchema
 from src.categories.models import CategoryModel
 
 from src.users.models import UserModel
-
 from src.utils.helpers import success_response
 
 
@@ -29,7 +28,7 @@ def create_category(body: CategorySchema, db: Session, user: UserModel):
     db.commit()
     db.refresh(new_category)
 
-    return success_response(data=new_category, message="Category Created Successfully")
+    return success_response(new_category, "Category created successfully")
 
 
 # ================= GET CATEGORY ===========================
@@ -42,7 +41,7 @@ def get_all_categories(db: Session, user: UserModel):
 
     categories = db.scalars(query).all()
 
-    return success_response(data=categories, message="Categories Fetched Successfully")
+    return success_response(categories, "Categories fetched successfully")
 
 
 # ================= GET ONE CATEGORY ===========================
@@ -59,7 +58,7 @@ def get_one_category(category_id: int, db: Session, user: UserModel):
             status_code=status.HTTP_403_FORBIDDEN, detail="You Are Not Authorized"
         )
 
-    return success_response(data=category, message="Category Fetched Successfully")
+    return success_response(category, "Category fetched successfully")
 
 
 # ================== UPDATE CATEGORY ==============================
@@ -97,7 +96,7 @@ def update_category(
     db.commit()
     db.refresh(category)
 
-    return success_response(data=category, message="Category Updated Successfully")
+    return success_response(category, "Category updated successfully")
 
 
 # ================== DELETE CATEGORY ==============================
@@ -117,4 +116,4 @@ def delete_category(category_id: int, db: Session, user: UserModel):
     db.delete(category)
     db.commit()
 
-    return success_response(data=None, message="Category Deleted Successfully")
+    return success_response(None, "Category deleted successfully")

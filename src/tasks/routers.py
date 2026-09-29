@@ -9,21 +9,22 @@ from src.tasks.dtos import (
     TaskPriority,
     TaskStatus,
     TaskListResponseSchema,
+    AssignTaskSchema,
 )
+from src.users.dtos import UserResponseSchema
 
 from src.users.models import UserModel
-from src.utils.dtos import SuccessResponse
-
 from src.core.db import get_db
 from src.dependencies.is_authenticated import is_authenticated
+from src.utils.dtos import ResponseSchema
 
-task_routes = APIRouter(prefix="/tasks")
+task_routes = APIRouter(prefix="/tasks", tags=["Tasks"])
 
 
 # ============== create task ====================
 @task_routes.post(
     "/",
-    response_model=SuccessResponse[TaskResponseSchema],
+    response_model=ResponseSchema[TaskResponseSchema],
     status_code=status.HTTP_201_CREATED,
 )
 def create_task(
@@ -37,7 +38,7 @@ def create_task(
 # =================== get all tasks ==================
 @task_routes.get(
     "/",
-    response_model=SuccessResponse[TaskListResponseSchema],
+    response_model=ResponseSchema[TaskListResponseSchema],
     status_code=status.HTTP_200_OK,
 )
 def get_all_tasks(
@@ -71,7 +72,7 @@ def get_all_tasks(
 # =============== get one task =======================
 @task_routes.get(
     "/{task_id}",
-    response_model=SuccessResponse[TaskResponseSchema],
+    response_model=ResponseSchema[TaskResponseSchema],
     status_code=status.HTTP_200_OK,
 )
 def get_one_task(
@@ -85,7 +86,7 @@ def get_one_task(
 # ================= update task ==========================
 @task_routes.put(
     "/{task_id}",
-    response_model=SuccessResponse[TaskResponseSchema],
+    response_model=ResponseSchema[TaskResponseSchema],
     status_code=status.HTTP_201_CREATED,
 )
 def update_task(
@@ -100,8 +101,8 @@ def update_task(
 # ================= delete task ===========================
 @task_routes.delete(
     "/{task_id}",
-    response_model=None,
-    status_code=status.HTTP_204_NO_CONTENT,
+    response_model=ResponseSchema[None],
+    status_code=status.HTTP_200_OK,
 )
 def delete_task(
     task_id: int,
@@ -114,7 +115,7 @@ def delete_task(
 # ================ ADD TAGS TO TASK ======================
 @task_routes.post(
     "/{task_id}/tags",
-    response_model=SuccessResponse[TaskResponseSchema],
+    response_model=ResponseSchema[TaskResponseSchema],
     status_code=status.HTTP_201_CREATED,
 )
 def add_tags_to_task(
@@ -129,8 +130,8 @@ def add_tags_to_task(
 # ================= DELETE TAG FROM TASK ==========================
 @task_routes.delete(
     "/{task_id}/tags/{tag_id}",
-    response_model=None,
-    status_code=status.HTTP_204_NO_CONTENT,
+    response_model=ResponseSchema[None],
+    status_code=status.HTTP_200_OK,
 )
 def delete_tag_from_task(
     task_id: int,
@@ -139,3 +140,47 @@ def delete_tag_from_task(
     user: UserModel = Depends(is_authenticated),
 ):
     return controllers.delete_tag_from_task(task_id, tag_id, db, user)
+
+
+# ================== ASSIGN TASK TO USER =============================
+@task_routes.post(
+    "/{task_id}/assign",
+    response_model=ResponseSchema[None],
+    status_code=status.HTTP_200_OK,
+)
+def assign_task(
+    task_id: int,
+    body: AssignTaskSchema,
+    db: Session = Depends(get_db),
+    user: UserModel = Depends(is_authenticated),
+):
+    return controllers.assign_task(task_id, body, db, user)
+
+
+# ================== GET TASK ASSIGNEES =============================
+@task_routes.get(
+    "/{task_id}/assignees",
+    response_model=ResponseSchema[list[UserResponseSchema]],
+    status_code=status.HTTP_200_OK,
+)
+def get_task_assignees(
+    task_id: int,
+    db: Session = Depends(get_db),
+    user: UserModel = Depends(is_authenticated),
+):
+    return controllers.get_task_assignees(task_id, db, user)
+
+
+# ================== REMOVE TASK ASSIGNEE =============================
+@task_routes.delete(
+    "/{task_id}/assignees/{user_id}",
+    response_model=ResponseSchema[None],
+    status_code=status.HTTP_200_OK,
+)
+def remove_task_assignee(
+    task_id: int,
+    user_id: int,
+    db: Session = Depends(get_db),
+    user: UserModel = Depends(is_authenticated),
+):
+    return controllers.remove_task_assignee(task_id, user_id, db, user)

@@ -10,14 +10,20 @@ from src.tags.models import TagModel
 from src.categories.models import CategoryModel
 
 from src.tasks.models import TaskModel
-from src.tasks.dtos import TaskSchema, AddTagSchema, TaskStatus, TaskPriority
+from src.tasks.dtos import (
+    TaskSchema,
+    AddTagSchema,
+    TaskStatus,
+    TaskPriority,
+    AssignTaskSchema,
+)
 
+from src.utils.helpers import check_task_access
 from src.utils.helpers import success_response
 
 
 # =========== CREATE TASK =======================
 def create_task(body: TaskSchema, db: Session, user: UserModel):
-
     if body.category_id is not None:
         category = db.get(CategoryModel, body.category_id)
 
@@ -46,7 +52,7 @@ def create_task(body: TaskSchema, db: Session, user: UserModel):
     db.commit()
     db.refresh(new_task)
 
-    return success_response(data=new_task, message="Task Created Successfully")
+    return success_response(new_task, "Task created successfully")
 
 
 # ============== GET ALL TASKS =============================
@@ -127,14 +133,14 @@ def get_all_tasks(
     total_pages = math.ceil(total / limit)
 
     return success_response(
-        data={
+        {
             "items": tasks,
             "page": page,
             "limit": limit,
             "total": total,
             "total_page": total_pages,
         },
-        message="All Task Fetched Successfully",
+        "Tasks fetched successfully",
     )
 
 
@@ -145,12 +151,11 @@ def get_one_task(task_id: int, db: Session, user: UserModel):
     if not task:
         raise HTTPException(404, detail=f"Task Id {task_id} not found")
 
-    if task.user_id != user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="You are not authorized"
-        )
+    check_task_access(task, user)
 
-    return success_response(data=task, message="Task Fetched Successfully")
+    print("task : ", task)
+
+    return success_response(task, "Task fetched successfully")
 
 
 # ============== UPDATE TASK ============================
@@ -160,10 +165,7 @@ def update_task(body: TaskSchema, task_id: int, db: Session, user: UserModel):
     if not task:
         raise HTTPException(404, detail=f"Task Id {task_id} not found")
 
-    if task.user_id != user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="You are not authorized"
-        )
+    check_task_access(task, user)
 
     if body.category_id is not None:
         category = db.get(CategoryModel, body.category_id)
@@ -189,7 +191,7 @@ def update_task(body: TaskSchema, task_id: int, db: Session, user: UserModel):
     db.commit()
     db.refresh(task)
 
-    return success_response(data=task, message="Task Updated Successfully")
+    return success_response(task, "Task updated successfully")
 
 
 # ====================== DELETE TASK ================================
@@ -207,7 +209,7 @@ def delete_task(task_id: int, db: Session, user: UserModel):
     db.delete(task)
     db.commit()
 
-    return success_response(data=None, message="Task Deleted Successfully")
+    return success_response(None, "Task deleted successfully")
 
 
 # ====================== ADD TAGS TO TASK ==========================
@@ -218,10 +220,7 @@ def add_tags_to_task(task_id: int, body: AddTagSchema, db: Session, user: UserMo
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Task Id {task_id} not found"
         )
 
-    if task.user_id != user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="You are not authorized"
-        )
+    check_task_access(task, user)
 
     for tag_id in body.tag_ids:
         tag = db.get(TagModel, tag_id)
@@ -232,13 +231,18 @@ def add_tags_to_task(task_id: int, body: AddTagSchema, db: Session, user: UserMo
                 detail=f"Tag Id {tag_id} not found",
             )
 
+        if tag in task.tags:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Tag Already Exists"
+            )
+
         task.tags.append(tag)
 
     db.commit()
 
     db.refresh(task)
 
-    return success_response(data=task, message="Tag Added To Task Successfully")
+    return success_response(task, "Tags added successfully")
 
 
 # ================ DELETE TAG FROM TASK ================================
@@ -249,10 +253,7 @@ def delete_tag_from_task(task_id: int, tag_id: int, db: Session, user: UserModel
             status_code=status.HTTP_404_NOT_FOUND, detail="Task Not Found"
         )
 
-    if task.user_id != user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="You Are UnAuthorized"
-        )
+    check_task_access(task, user)
 
     tag = db.get(TagModel, tag_id)
 
@@ -271,4 +272,97 @@ def delete_tag_from_task(task_id: int, tag_id: int, db: Session, user: UserModel
 
     db.commit()
 
-    return success_response(data=None, message="Tag Removed from Task")
+    return success_response(None, "Tag removed successfully")
+
+
+# ======================= ASSIGN TASKS ===================================
+def assign_task(task_id: int, body: AssignTaskSchema, db: Session, user: UserModel):
+    task = db.get(TaskModel, task_id)
+
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task Not Found"
+        )
+
+    if task.user_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only The Task Owner Can Assign Users",
+        )
+
+    assigned_user = db.get(UserModel, body.user_id)
+
+    if not assigned_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User Id Not Found"
+        )
+
+    if assigned_user.id == user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You Cannot Assign Youself To Your Own Task",
+        )
+
+    if assigned_user in task.assigned_users:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User Is Already Assigned To This Task",
+        )
+
+    task.assigned_users.append(assigned_user)
+
+    db.commit()
+
+    return success_response(None, "Task assigned successfully")
+
+
+# ============================ GET TASK ASSIGNEES ==========================
+def get_task_assignees(task_id: int, db: Session, user: UserModel):
+    task = db.get(TaskModel, task_id)
+
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task Id Not Found"
+        )
+
+    if task.user_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="You Are Not Authorized"
+        )
+
+    return success_response(task.assigned_users, "Task Assignees Fetched Successfully")
+
+
+# ================== REMOVE TASK ASSIGNEE =============================
+def remove_task_assignee(task_id: int, user_id: int, db: Session, user: UserModel):
+    task = db.get(TaskModel, task_id)
+
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task Id Not Found"
+        )
+
+    if task.user_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only The Task Owner Can Remove users",
+        )
+
+    assigned_user = db.get(UserModel, user_id)
+
+    if not assigned_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User Not Found"
+        )
+
+    if assigned_user not in task.assigned_users:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User Is Not Assigned To This Task",
+        )
+
+    task.assigned_users.remove(assigned_user)
+
+    db.commit()
+
+    return success_response(None, "User Removed From Task Successfully")

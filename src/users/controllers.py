@@ -9,7 +9,6 @@ from src.core.settings import settings
 from src.utils.mail import send_email
 from src.utils.upload import save_file, delete_file
 from src.utils.helpers import success_response
-
 from src.users.dtos import UserSchema, LoginSchema
 from src.users.models import UserModel
 
@@ -64,7 +63,7 @@ async def register(body: UserSchema, bg_task: BackgroundTasks, db: Session):
     # send email confirmation
     bg_task.add_task(send_email, [new_user.email])
 
-    return success_response(data=new_user, message="User Registered Successfully")
+    return success_response(new_user, "User registered successfully")
 
 
 # ============= login user ==================================
@@ -91,7 +90,7 @@ def login(body: LoginSchema, db: Session):
         settings.ALGORITHM,
     )
 
-    return success_response(data={"token": token}, message="Login Successful")
+    return success_response({"token": token}, "Login successful")
 
 
 # ============= upload avatar =================================
@@ -109,6 +108,4 @@ def upload_avatar(file: UploadFile, user: UserModel, db: Session):
     db.commit()
     db.refresh(user)
 
-    return success_response(
-        data={"avatar": filename}, message="Avatar uploaded successfully"
-    )
+    return success_response({"avatar": filename}, "Avatar uploaded successfully")

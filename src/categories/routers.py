@@ -9,16 +9,15 @@ from src.categories.dtos import CategorySchema, CategoryResponseSchema
 from src.categories import controllers
 
 from src.dependencies.is_authenticated import is_authenticated
+from src.utils.dtos import ResponseSchema
 
-from src.utils.dtos import SuccessResponse
-
-category_routes = APIRouter(prefix="/categories")
+category_routes = APIRouter(prefix="/categories", tags=["Categories"])
 
 
 # ================== CREATE CATEGORY ===========================
 @category_routes.post(
     "/",
-    response_model=SuccessResponse[CategoryResponseSchema],
+    response_model=ResponseSchema[CategoryResponseSchema],
     status_code=status.HTTP_201_CREATED,
 )
 def create_category(
@@ -32,7 +31,7 @@ def create_category(
 # ================== GET CATEGORY ===========================
 @category_routes.get(
     "/",
-    response_model=SuccessResponse[list[CategoryResponseSchema]],
+    response_model=ResponseSchema[list[CategoryResponseSchema]],
     status_code=status.HTTP_200_OK,
 )
 def get_all_categories(
@@ -44,7 +43,7 @@ def get_all_categories(
 # ================== GET ONE CATEGORY ===========================
 @category_routes.get(
     "/{category_id}",
-    response_model=SuccessResponse[CategoryResponseSchema],
+    response_model=ResponseSchema[CategoryResponseSchema],
     status_code=status.HTTP_200_OK,
 )
 def get_one_category(
@@ -58,7 +57,7 @@ def get_one_category(
 # ================== UPDATE CATEGORY ===========================
 @category_routes.put(
     "/{category_id}",
-    response_model=SuccessResponse[CategoryResponseSchema],
+    response_model=ResponseSchema[CategoryResponseSchema],
     status_code=status.HTTP_200_OK,
 )
 def update_category(
@@ -73,7 +72,7 @@ def update_category(
 # ================== DELETE CATEGORY ===========================
 @category_routes.delete(
     "/{category_id}",
-    response_model=None,
+    response_model=ResponseSchema[None],
     status_code=status.HTTP_200_OK,
 )
 def delete_category(

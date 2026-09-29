@@ -6,9 +6,10 @@ from src.tags.models import TagModel
 
 if TYPE_CHECKING:
     from src.categories.models import CategoryModel
+    from src.users.models import UserModel
 
 from src.core.db import Base
-from src.utils.associations import task_tags
+from src.utils.associations import task_tags, task_assignment
 
 
 class TaskModel(Base):
@@ -33,4 +34,8 @@ class TaskModel(Base):
 
     tags: Mapped[list["TagModel"]] = relationship(
         secondary=task_tags, back_populates="tasks"
+    )
+
+    assigned_users: Mapped[list["UserModel"]] = relationship(
+        secondary=task_assignment, back_populates="assigned_tasks"
     )
