@@ -7,6 +7,7 @@ from src.users.models import UserModel
 from src.tasks.models import TaskModel
 from src.categories.models import CategoryModel
 from src.comments.models import CommentModel
+from src.notifications.models import NotificationModel
 from src.core.db import Base
 
 from alembic import context

@@ -1,6 +1,6 @@
 import math
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, BackgroundTasks
 
 from sqlalchemy import or_, asc, desc, select, func
 from sqlalchemy.orm import Session, selectinload
@@ -8,8 +8,8 @@ from sqlalchemy.orm import Session, selectinload
 from src.users.models import UserModel
 from src.tags.models import TagModel
 from src.categories.models import CategoryModel
-
 from src.tasks.models import TaskModel
+
 from src.tasks.dtos import (
     TaskSchema,
     AddTagSchema,
@@ -18,8 +18,10 @@ from src.tasks.dtos import (
     AssignTaskSchema,
 )
 
+from src.notifications.controllers import create_notification
 from src.utils.helpers import check_task_access
 from src.utils.helpers import success_response
+from src.utils.mail import send_email
 
 
 # =========== CREATE TASK =======================
@@ -153,8 +155,6 @@ def get_one_task(task_id: int, db: Session, user: UserModel):
 
     check_task_access(task, user)
 
-    print("task : ", task)
-
     return success_response(task, "Task fetched successfully")
 
 
@@ -276,7 +276,13 @@ def delete_tag_from_task(task_id: int, tag_id: int, db: Session, user: UserModel
 
 
 # ======================= ASSIGN TASKS ===================================
-def assign_task(task_id: int, body: AssignTaskSchema, db: Session, user: UserModel):
+def assign_task(
+    task_id: int,
+    body: AssignTaskSchema,
+    backgroud_tasks: BackgroundTasks,
+    db: Session,
+    user: UserModel,
+):
     task = db.get(TaskModel, task_id)
 
     if not task:
@@ -310,6 +316,26 @@ def assign_task(task_id: int, body: AssignTaskSchema, db: Session, user: UserMod
         )
 
     task.assigned_users.append(assigned_user)
+
+    # Database notification
+    create_notification(
+        message=f"You were assigned to task: {task.title}",
+        user_id=assigned_user.id,
+        db=db,
+    )
+
+    # Email notification
+    backgroud_tasks.add_task(
+        send_email,
+        emails=[assigned_user.email],
+        subject="You Were Assigned To A Task",
+        html=f"""
+            <h2>Task Assigned</h2>
+            <p>Hi {assigned_user.name},</p>
+            <p><strong>{task.title}</strong></p>
+            <p>Please login to TaskMaster to view the task.</p>
+        """,
+    )
 
     db.commit()
 

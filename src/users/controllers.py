@@ -61,7 +61,9 @@ async def register(body: UserSchema, bg_task: BackgroundTasks, db: Session):
     db.refresh(new_user)
 
     # send email confirmation
-    bg_task.add_task(send_email, [new_user.email])
+    html = """<p>Hi, Thanks for Registration, Our team will contact you soon!</p> """
+    subject = "Registration Confirmation"
+    bg_task.add_task(send_email, [new_user.email], subject=subject, html=html)
 
     return success_response(new_user, "User registered successfully")
 

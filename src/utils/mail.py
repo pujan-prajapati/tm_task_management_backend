@@ -16,11 +16,9 @@ conf = ConnectionConfig(
 )
 
 
-async def send_email(emails: List[str]):
-    html = """<p>Hi, Thanks for Registration, Our team will contact you soon!</p> """
-
+async def send_email(emails: List[str], subject: str, html: str):
     message = MessageSchema(
-        subject="Registration Confirmation",
+        subject=subject,
         recipients=emails,
         body=html,
         subtype=MessageType.html,
@@ -28,4 +26,3 @@ async def send_email(emails: List[str]):
 
     fm = FastMail(conf)
     await fm.send_message(message)
-    print({"status_code": 200, "message": "email has been sent"})

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status, Query
+from fastapi import APIRouter, Depends, status, Query, BackgroundTasks
 from sqlalchemy.orm import Session
 
 from src.tasks import controllers
@@ -151,10 +151,11 @@ def delete_tag_from_task(
 def assign_task(
     task_id: int,
     body: AssignTaskSchema,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     user: UserModel = Depends(is_authenticated),
 ):
-    return controllers.assign_task(task_id, body, db, user)
+    return controllers.assign_task(task_id, body, background_tasks, db, user)
 
 
 # ================== GET TASK ASSIGNEES =============================
