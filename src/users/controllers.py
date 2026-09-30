@@ -9,7 +9,12 @@ from src.core.settings import settings
 from src.utils.mail import send_email
 from src.utils.upload import save_file, delete_file
 from src.utils.helpers import success_response
-from src.users.dtos import UserSchema, LoginSchema
+from src.users.dtos import (
+    UserSchema,
+    LoginSchema,
+    UpdateUserRoleSchema,
+    UpdateUserStatusSchema,
+)
 from src.users.models import UserModel
 
 import jwt
@@ -84,6 +89,11 @@ def login(body: LoginSchema, db: Session):
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Credentials"
         )
 
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="User account is inactive"
+        )
+
     exp_time = datetime.now() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 
     token = jwt.encode(
@@ -98,6 +108,7 @@ def login(body: LoginSchema, db: Session):
 # ============= upload avatar =================================
 def upload_avatar(file: UploadFile, user: UserModel, db: Session):
     if user.avatar:
+
         delete_file(user.avatar, "media/avatars")
 
     filename = save_file(
@@ -111,3 +122,90 @@ def upload_avatar(file: UploadFile, user: UserModel, db: Session):
     db.refresh(user)
 
     return success_response({"avatar": filename}, "Avatar uploaded successfully")
+
+
+# ============= GET ALL USERS =================================
+def get_all_users(db: Session, user: UserModel):
+    users = db.scalars(select(UserModel)).all()
+
+    return success_response(data=users, message="Users Fetched Successfully")
+
+
+# ============= UPDATE USER ROLE =================================
+def update_user_role(
+    user_id: int, body: UpdateUserRoleSchema, db: Session, current_user: UserModel
+):
+    if user_id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot change your own role",
+        )
+
+    user = db.get(UserModel, user_id)
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User Not Found"
+        )
+
+    user.role = body.role
+
+    db.commit()
+    db.refresh(user)
+
+    return success_response(data=user, message="User Role Updated Successfully")
+
+
+# ============= ADMIN ACTIVATE/DEACTIVATE =================================
+def update_user_status(
+    user_id: int, body: UpdateUserStatusSchema, db: Session, current_user: UserModel
+):
+    if user_id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot change your own status",
+        )
+
+    user = db.get(UserModel, user_id)
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User Not Found"
+        )
+
+    user.is_active = body.is_active
+
+    db.commit()
+    db.refresh(user)
+
+    return success_response(data=user, message="User Status Updated Successfully")
+
+
+# ============= DELETE USER =================================
+def delete_user(
+    user_id: int,
+    db: Session,
+    current_user: UserModel,
+):
+    # Prevent admin from deleting themselves
+    if user_id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot delete your own account",
+        )
+
+    user = db.get(UserModel, user_id)
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User Not Found",
+        )
+
+    db.delete(user)
+    db.commit()
+
+    return success_response(
+        data=None,
+        message="User Deleted Successfully",
+    )

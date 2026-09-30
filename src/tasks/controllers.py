@@ -19,7 +19,7 @@ from src.tasks.dtos import (
 )
 
 from src.notifications.controllers import create_notification
-from src.utils.helpers import check_task_access
+from src.tasks.helpers import check_task_access
 from src.utils.helpers import success_response
 from src.utils.mail import send_email
 
@@ -326,6 +326,7 @@ async def assign_task(
         db=db,
     )
 
+    # websocket notification
     await manager.send_to_user(
         user_id=assigned_user.id,
         message={

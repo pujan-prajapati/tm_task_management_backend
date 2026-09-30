@@ -24,9 +24,15 @@ def is_authenticated(request: Request, db: Session = Depends(get_db)):
         user_id = data.get("_id")
 
         user = db.query(UserModel).filter(UserModel.id == user_id).first()
+
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="You Are Unauthorized"
+            )
+
+        if not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="User account is inactive"
             )
 
         return user

@@ -27,6 +27,9 @@ def websocket_is_authenticated(websocket: WebSocket, db: Session):
         if not user:
             raise InvalidTokenError
 
+        if not user.is_active:
+            raise InvalidTokenError
+
         return user
 
     except InvalidTokenError:

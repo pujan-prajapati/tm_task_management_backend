@@ -8,7 +8,8 @@ from src.users.models import UserModel
 from src.tasks.models import TaskModel
 
 from src.notifications.controllers import create_notification
-from src.utils.helpers import check_task_access, success_response
+from src.utils.helpers import success_response
+from src.tasks.helpers import check_task_access
 from src.utils.mail import send_email
 
 from src.websocket.manager import manager

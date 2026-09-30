@@ -20,6 +20,9 @@ class UserModel(Base):
     email: Mapped[str] = mapped_column(String, unique=True)
     phone: Mapped[str] = mapped_column(String, unique=True)
     avatar: Mapped[str | None] = mapped_column(String, nullable=True)
+    role: Mapped[str] = mapped_column(String(20), default="user", nullable=False)
+
+    is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
 
     assigned_tasks: Mapped[list["TaskModel"]] = relationship(
         secondary=task_assignment, back_populates="assigned_users"

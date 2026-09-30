@@ -14,12 +14,15 @@ from src.users.dtos import (
     LoginSchema,
     LoginResponseSchema,
     AvatarResponseSchema,
+    UpdateUserRoleSchema,
+    UpdateUserStatusSchema,
 )
 from src.users import controllers
 
 from src.core.db import get_db
 
 from src.dependencies.is_authenticated import is_authenticated
+from src.dependencies.check_admin import admin_required
 
 from src.users.models import UserModel
 from src.utils.dtos import ResponseSchema
@@ -61,3 +64,61 @@ def upload_avatar(
     db: Session = Depends(get_db),
 ):
     return controllers.upload_avatar(file, user, db)
+
+
+# =============== GET ALL USERS ==============================
+@user_routes.get(
+    "/admin/users", response_model=ResponseSchema[list[UserResponseSchema]]
+)
+def get_users(db: Session = Depends(get_db), user: UserModel = Depends(admin_required)):
+    return controllers.get_all_users(db, user)
+
+
+# =============== UPDATE USER ROLE ==============================
+@user_routes.put(
+    "/admin/users/{user_id}/role",
+    response_model=ResponseSchema[UserResponseSchema],
+)
+def update_role(
+    user_id: int,
+    body: UpdateUserRoleSchema,
+    db: Session = Depends(get_db),
+    user: UserModel = Depends(admin_required),
+):
+    return controllers.update_user_role(user_id, body, db, user)
+
+
+# =============== ADMIN ACTIVATE/DEACTIVATE ==============================
+@user_routes.patch(
+    "/admin/users/{user_id}/status",
+    response_model=ResponseSchema[UserResponseSchema],
+)
+def update_status(
+    user_id: int,
+    body: UpdateUserStatusSchema,
+    db: Session = Depends(get_db),
+    user: UserModel = Depends(admin_required),
+):
+    return controllers.update_user_status(
+        user_id,
+        body,
+        db,
+        user,
+    )
+
+
+# ============= DELETE USER =================================
+@user_routes.delete(
+    "/admin/users/{user_id}",
+    response_model=ResponseSchema[None],
+)
+def delete_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    user: UserModel = Depends(admin_required),
+):
+    return controllers.delete_user(
+        user_id,
+        db,
+        user,
+    )

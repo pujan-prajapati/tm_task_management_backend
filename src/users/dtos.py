@@ -1,4 +1,10 @@
 from pydantic import BaseModel, ConfigDict
+from enum import Enum
+
+
+class UserRole(str, Enum):
+    USER = "user"
+    ADMIN = "admin"
 
 
 class UserSchema(BaseModel):
@@ -16,6 +22,8 @@ class UserResponseSchema(BaseModel):
     username: str
     email: str
     phone: str
+    role: str
+    is_active: bool
 
 
 class LoginSchema(BaseModel):
@@ -29,3 +37,11 @@ class LoginResponseSchema(BaseModel):
 
 class AvatarResponseSchema(BaseModel):
     avatar: str
+
+
+class UpdateUserRoleSchema(BaseModel):
+    role: UserRole
+
+
+class UpdateUserStatusSchema(BaseModel):
+    is_active: bool
