@@ -17,14 +17,14 @@ comment_routes = APIRouter(prefix="/tasks", tags=["Comments"])
     response_model=ResponseSchema[CommentResponseSchema],
     status_code=status.HTTP_201_CREATED,
 )
-def create_comment(
+async def create_comment(
     task_id: int,
     body: CommentSchema,
     backgroud_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     user: UserModel = Depends(is_authenticated),
 ):
-    return controllers.create_comment(body, task_id, backgroud_tasks, db, user)
+    return await controllers.create_comment(body, task_id, backgroud_tasks, db, user)
 
 
 # ================ GET ALL COMMENTS =====================

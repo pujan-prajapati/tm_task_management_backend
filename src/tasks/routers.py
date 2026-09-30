@@ -148,14 +148,14 @@ def delete_tag_from_task(
     response_model=ResponseSchema[None],
     status_code=status.HTTP_200_OK,
 )
-def assign_task(
+async def assign_task(
     task_id: int,
     body: AssignTaskSchema,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     user: UserModel = Depends(is_authenticated),
 ):
-    return controllers.assign_task(task_id, body, background_tasks, db, user)
+    return await controllers.assign_task(task_id, body, background_tasks, db, user)
 
 
 # ================== GET TASK ASSIGNEES =============================

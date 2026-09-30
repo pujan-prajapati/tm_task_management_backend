@@ -10,6 +10,7 @@ from src.tags.routers import tag_routes
 from src.categories.routers import category_routes
 from src.comments.routers import comment_routes
 from src.notifications.routers import notification_routes
+from src.websocket.routers import websocket_routes
 
 Base.metadata.create_all(engine)
 
@@ -25,3 +26,4 @@ app.include_router(tag_routes)
 app.include_router(category_routes)
 app.include_router(comment_routes)
 app.include_router(notification_routes)
+app.include_router(websocket_routes)

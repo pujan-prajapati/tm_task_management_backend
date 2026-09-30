@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+  <head>
+    <title>WebSocket Test</title>
+  </head>
+  <body>
+    <h1>WebSocket Test</h1>
+
+    <button onclick="connect()">Connect</button>
+    <button onclick="sendMessage()">Send Message</button>
+
+    <script>
+      let ws;
+
+      function connect() {
+        ws = new WebSocket(
+          "ws://localhost:8000/ws/notifications?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOjcsImV4cCI6MTc5MDc2MTI2OC4xMTMyNjh9.FQMMQZaOEX3uHRLLOyFJy80T-hsglEvzQQkYedDxfCM",
+        );
+
+        ws.onopen = () => {
+          console.log("Connected");
+        };
+
+        ws.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+
+          console.log("Type: ", data.type);
+          console.log("Message: ", data.message);
+          console.log("Task ID: ", data.task_id);
+        };
+
+        ws.onerror = (error) => {
+          console.log("WebSocket error:", error);
+        };
+
+        ws.onclose = () => {
+          console.log("Connection closed");
+        };
+      }
+
+      function sendMessage() {
+        ws.send("Hello FastAPI");
+      }
+    </script>
+  </body>
+</html>

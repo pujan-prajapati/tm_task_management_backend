@@ -23,6 +23,8 @@ from src.utils.helpers import check_task_access
 from src.utils.helpers import success_response
 from src.utils.mail import send_email
 
+from src.websocket.manager import manager
+
 
 # =========== CREATE TASK =======================
 def create_task(body: TaskSchema, db: Session, user: UserModel):
@@ -276,10 +278,10 @@ def delete_tag_from_task(task_id: int, tag_id: int, db: Session, user: UserModel
 
 
 # ======================= ASSIGN TASKS ===================================
-def assign_task(
+async def assign_task(
     task_id: int,
     body: AssignTaskSchema,
-    backgroud_tasks: BackgroundTasks,
+    background_tasks: BackgroundTasks,
     db: Session,
     user: UserModel,
 ):
@@ -324,8 +326,17 @@ def assign_task(
         db=db,
     )
 
+    await manager.send_to_user(
+        user_id=assigned_user.id,
+        message={
+            "type": "task_assigned",
+            "message": f"You were assigned to task: {task.title}",
+            "task_id": task.id,
+        },
+    )
+
     # Email notification
-    backgroud_tasks.add_task(
+    background_tasks.add_task(
         send_email,
         emails=[assigned_user.email],
         subject="You Were Assigned To A Task",

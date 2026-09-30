@@ -4,9 +4,11 @@ from src.core.settings import settings
 from sqlalchemy.orm import Session
 from jwt.exceptions import InvalidTokenError
 from src.core.db import get_db
+from jwt.exceptions import InvalidTokenError
 import jwt
 
 
+# ===================== IS AUTHENTICATED =======================================
 def is_authenticated(request: Request, db: Session = Depends(get_db)):
     try:
         token = request.headers.get("authorization")

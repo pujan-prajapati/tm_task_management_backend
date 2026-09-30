@@ -11,9 +11,11 @@ from src.notifications.controllers import create_notification
 from src.utils.helpers import check_task_access, success_response
 from src.utils.mail import send_email
 
+from src.websocket.manager import manager
+
 
 # =================== CREATE COMMENT =========================
-def create_comment(
+async def create_comment(
     body: CommentSchema,
     task_id: int,
     backgroud_tasks: BackgroundTasks,
@@ -51,6 +53,15 @@ def create_comment(
 
         create_notification(
             message=f"New comment on task: {task.title}", user_id=recipent_id, db=db
+        )
+
+        await manager.send_to_user(
+            user_id=recipent_id,
+            message={
+                "type": "comment_added",
+                "message": f"New comment on task: {task.title}",
+                "task_id": task.id,
+            },
         )
 
         # Email notification
