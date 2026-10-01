@@ -16,3 +16,10 @@ dependencies = [
     "rq>=2.12.0",
     "sqlalchemy>=2.0.54",
 ]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "httpx2>=2.13.1",
+    "pytest>=9.1.1",
+]

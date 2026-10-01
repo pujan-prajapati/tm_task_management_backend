@@ -63,7 +63,7 @@ def create_task(body: TaskSchema, db: Session, user: UserModel):
 
     delete_user_task_cache(user.id)
 
-    return success_response(new_task, "Task created successfully")
+    return success_response(new_task, "Task Created Successfully")
 
 
 # ============== GET ALL TASKS =============================
@@ -179,7 +179,7 @@ def get_all_tasks(
 
     return success_response(
         response_data,
-        "Tasks fetched successfully",
+        "Tasks Fetched Successfully",
     )
 
 
@@ -188,7 +188,7 @@ def get_one_task(task_id: int, db: Session, user: UserModel):
     task = db.get(TaskModel, task_id)
 
     if not task:
-        raise HTTPException(404, detail=f"Task Id {task_id} not found")
+        raise HTTPException(404, detail="Task not found")
 
     check_task_access(task, user)
 
@@ -200,7 +200,7 @@ def update_task(body: TaskSchema, task_id: int, db: Session, user: UserModel):
     task = db.get(TaskModel, task_id)
 
     if not task:
-        raise HTTPException(404, detail=f"Task Id {task_id} not found")
+        raise HTTPException(404, detail="Task not found")
 
     check_task_access(task, user)
 
@@ -250,7 +250,7 @@ def delete_task(task_id: int, db: Session, user: UserModel):
 
     delete_user_task_cache(user.id)
 
-    return success_response(None, "Task deleted successfully")
+    return success_response(None, "Task Deleted Successfully")
 
 
 # ====================== ADD TAGS TO TASK ==========================

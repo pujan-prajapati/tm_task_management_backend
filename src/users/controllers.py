@@ -53,6 +53,13 @@ async def register(body: UserSchema, db: Session):
     if email:
         raise HTTPException(400, detail="Email Already Exists")
 
+    # check if phone already exists or not
+    query = select(UserModel).where(UserModel.phone == body.phone)
+    phone = db.scalar(query)
+
+    if phone:
+        raise HTTPException(400, detail="Phone Already Exists")
+
     # hash password
     hash_password = get_password_hash(body.password)
 
@@ -81,7 +88,7 @@ async def register(body: UserSchema, db: Session):
     )
     # bg_task.add_task(send_email, [new_user.email], subject=subject, html=html)
 
-    return success_response(new_user, "User registered successfully")
+    return success_response(new_user, "User Registered Successful")
 
 
 # ============= login user ==================================
@@ -116,7 +123,7 @@ def login(body: LoginSchema, db: Session):
 
     if not user.is_active:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="User account is inactive"
+            status_code=status.HTTP_403_FORBIDDEN, detail="User Account Is Inactive"
         )
 
     delete_cache(rate_limit_key)
@@ -129,7 +136,7 @@ def login(body: LoginSchema, db: Session):
         settings.ALGORITHM,
     )
 
-    return success_response({"token": token}, "Login successful")
+    return success_response({"token": token}, "Login Successful")
 
 
 # ============= upload avatar =================================

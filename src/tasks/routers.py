@@ -87,7 +87,7 @@ def get_one_task(
 @task_routes.put(
     "/{task_id}",
     response_model=ResponseSchema[TaskResponseSchema],
-    status_code=status.HTTP_201_CREATED,
+    status_code=status.HTTP_200_OK,
 )
 def update_task(
     body: TaskSchema,
