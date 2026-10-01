@@ -14,12 +14,14 @@ from src.utils.mail import send_email
 
 from src.websocket.manager import manager
 
+from src.jobs.queue import email_queue, email_retry
+from src.jobs.email_jobs import send_email_job
+
 
 # =================== CREATE COMMENT =========================
 async def create_comment(
     body: CommentSchema,
     task_id: int,
-    backgroud_tasks: BackgroundTasks,
     db: Session,
     user: UserModel,
 ):
@@ -66,19 +68,33 @@ async def create_comment(
         )
 
         # Email notification
-        backgroud_tasks.add_task(
-            send_email,
+        email_queue.enqueue(
+            send_email_job,
             emails=[recipient.email],
             subject="New Comment On Your Task",
             html=f"""
-                <h2>New Comment</h2>
-                <p>Hi {recipient.name},</p>
-                <p><strong>{task.title}</strong></p>
-                <p><strong>Comment:</strong></p>
-                <p>{new_comment.content}</p>
-                <p>Please login to TaskMaster to view the task.</p>
-            """,
+                    <h2>New Comment</h2>
+                    <p>Hi {recipient.name},</p>
+                    <p><strong>{task.title}</strong></p>
+                    <p><strong>Comment:</strong></p>
+                    <p>{new_comment.content}</p>
+                    <p>Please login to TaskMaster to view the task.</p>
+                """,
+            retry=email_retry,
         )
+        # backgroud_tasks.add_task(
+        #     send_email,
+        #     emails=[recipient.email],
+        #     subject="New Comment On Your Task",
+        #     html=f"""
+        #         <h2>New Comment</h2>
+        #         <p>Hi {recipient.name},</p>
+        #         <p><strong>{task.title}</strong></p>
+        #         <p><strong>Comment:</strong></p>
+        #         <p>{new_comment.content}</p>
+        #         <p>Please login to TaskMaster to view the task.</p>
+        #     """,
+        # )
 
     db.commit()
     db.refresh(new_comment)

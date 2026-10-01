@@ -20,6 +20,10 @@ from src.users.models import UserModel
 import jwt
 from pwdlib import PasswordHash
 
+from src.utils.redis import increment_counter, delete_cache, get_cache
+from src.jobs.email_jobs import send_email_job
+from src.jobs.queue import email_queue, email_retry
+
 password_hash = PasswordHash.recommended()
 
 
@@ -34,7 +38,7 @@ def verify_password(plain_password, hashed_password):
 
 
 # ============= register user ===================================
-async def register(body: UserSchema, bg_task: BackgroundTasks, db: Session):
+async def register(body: UserSchema, db: Session):
     # check if user already exists with username
     query = select(UserModel).where(UserModel.username == body.username)
     user = db.scalar(query)
@@ -68,23 +72,44 @@ async def register(body: UserSchema, bg_task: BackgroundTasks, db: Session):
     # send email confirmation
     html = """<p>Hi, Thanks for Registration, Our team will contact you soon!</p> """
     subject = "Registration Confirmation"
-    bg_task.add_task(send_email, [new_user.email], subject=subject, html=html)
+    email_queue.enqueue(
+        send_email_job,
+        emails=[new_user.email],
+        subject=subject,
+        html=html,
+        retry=email_retry,
+    )
+    # bg_task.add_task(send_email, [new_user.email], subject=subject, html=html)
 
     return success_response(new_user, "User registered successfully")
 
 
 # ============= login user ==================================
 def login(body: LoginSchema, db: Session):
+    rate_limit_key = f"login_attemts:{body.username}"
+
+    attempts = get_cache(rate_limit_key)
+
+    if attempts is not None and int(attempts) >= 5:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many login attempts. Please try again later",
+        )
+
     # check if user exists or not
     query = select(UserModel).where(UserModel.username == body.username)
     user = db.scalar(query)
 
     if not user:
+        increment_counter(rate_limit_key, 60)
+
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Credentials"
         )
 
     if not verify_password(body.password, user.hash_password):
+        increment_counter(rate_limit_key, 60)
+
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Credentials"
         )
@@ -93,6 +118,8 @@ def login(body: LoginSchema, db: Session):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="User account is inactive"
         )
+
+    delete_cache(rate_limit_key)
 
     exp_time = datetime.now() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 

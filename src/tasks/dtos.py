@@ -60,7 +60,7 @@ class TaskListResponseSchema(BaseModel):
     page: int
     limit: int
     total: int
-    total_page: int
+    total_pages: int
 
 
 class AssignTaskSchema(BaseModel):

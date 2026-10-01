@@ -36,10 +36,8 @@ user_routes = APIRouter(prefix="/users", tags=["Users"])
     response_model=ResponseSchema[UserResponseSchema],
     status_code=status.HTTP_201_CREATED,
 )
-async def register(
-    body: UserSchema, bg_task: BackgroundTasks, db: Session = Depends(get_db)
-):
-    return await controllers.register(body, bg_task, db)
+async def register(body: UserSchema, db: Session = Depends(get_db)):
+    return await controllers.register(body, db)
 
 
 # =============== login user ==============================

@@ -16,6 +16,7 @@ from src.tasks.dtos import (
     TaskStatus,
     TaskPriority,
     AssignTaskSchema,
+    TaskResponseSchema,
 )
 
 from src.notifications.controllers import create_notification
@@ -24,6 +25,10 @@ from src.utils.helpers import success_response
 from src.utils.mail import send_email
 
 from src.websocket.manager import manager
+
+from src.utils.redis import get_cache, set_cache, delete_user_task_cache
+from src.jobs.email_jobs import send_email_job
+from src.jobs.queue import email_queue, email_retry
 
 
 # =========== CREATE TASK =======================
@@ -56,6 +61,8 @@ def create_task(body: TaskSchema, db: Session, user: UserModel):
     db.commit()
     db.refresh(new_task)
 
+    delete_user_task_cache(user.id)
+
     return success_response(new_task, "Task created successfully")
 
 
@@ -73,10 +80,29 @@ def get_all_tasks(
     status: TaskStatus | None = None,
     category_id: int | None = None,
 ):
+    can_cache = not any([search, tag_ids, priority, status, category_id])
+
+    cache_key = (
+        f"tasks:user:{user.id}:"
+        f"page:{page}:limit:{limit}:"
+        f"sort:{sort_by}:order{order}"
+    )
+
+    if can_cache:
+        cached_data = get_cache(cache_key)
+
+        if cached_data is not None:
+            return success_response(cached_data, "Tasks fetched successfully")
+
     query = (
         select(TaskModel)
         .options(selectinload(TaskModel.tags))
-        .where(TaskModel.user_id == user.id)
+        .where(
+            or_(
+                TaskModel.user_id == user.id,
+                TaskModel.assigned_users.any(UserModel.id == user.id),
+            )
+        )
     )
 
     # search --------------
@@ -133,17 +159,26 @@ def get_all_tasks(
 
     tasks = db.scalars(query).all()
 
+    task_items = [
+        TaskResponseSchema.model_validate(task).model_dump() for task in tasks
+    ]
+
     # Total pages -----------------
     total_pages = math.ceil(total / limit)
 
+    response_data = {
+        "items": task_items,
+        "page": page,
+        "limit": limit,
+        "total": total,
+        "total_pages": total_pages,
+    }
+
+    if can_cache:
+        set_cache(cache_key, response_data, expire=60)
+
     return success_response(
-        {
-            "items": tasks,
-            "page": page,
-            "limit": limit,
-            "total": total,
-            "total_page": total_pages,
-        },
+        response_data,
         "Tasks fetched successfully",
     )
 
@@ -193,6 +228,8 @@ def update_task(body: TaskSchema, task_id: int, db: Session, user: UserModel):
     db.commit()
     db.refresh(task)
 
+    delete_user_task_cache(user.id)
+
     return success_response(task, "Task updated successfully")
 
 
@@ -210,6 +247,8 @@ def delete_task(task_id: int, db: Session, user: UserModel):
 
     db.delete(task)
     db.commit()
+
+    delete_user_task_cache(user.id)
 
     return success_response(None, "Task deleted successfully")
 
@@ -281,7 +320,6 @@ def delete_tag_from_task(task_id: int, tag_id: int, db: Session, user: UserModel
 async def assign_task(
     task_id: int,
     body: AssignTaskSchema,
-    background_tasks: BackgroundTasks,
     db: Session,
     user: UserModel,
 ):
@@ -337,8 +375,8 @@ async def assign_task(
     )
 
     # Email notification
-    background_tasks.add_task(
-        send_email,
+    email_queue.enqueue(
+        send_email_job,
         emails=[assigned_user.email],
         subject="You Were Assigned To A Task",
         html=f"""
@@ -347,9 +385,23 @@ async def assign_task(
             <p><strong>{task.title}</strong></p>
             <p>Please login to TaskMaster to view the task.</p>
         """,
+        retry=email_retry,
     )
+    # background_tasks.add_task(
+    #     send_email,
+    #     emails=[assigned_user.email],
+    #     subject="You Were Assigned To A Task",
+    #     html=f"""
+    #         <h2>Task Assigned</h2>
+    #         <p>Hi {assigned_user.name},</p>
+    #         <p><strong>{task.title}</strong></p>
+    #         <p>Please login to TaskMaster to view the task.</p>
+    #     """,
+    # )
 
     db.commit()
+    delete_user_task_cache(task.user_id)
+    delete_user_task_cache(assigned_user.id)
 
     return success_response(None, "Task assigned successfully")
 
@@ -402,5 +454,8 @@ def remove_task_assignee(task_id: int, user_id: int, db: Session, user: UserMode
     task.assigned_users.remove(assigned_user)
 
     db.commit()
+
+    delete_user_task_cache(task.user_id)
+    delete_user_task_cache(assigned_user.id)
 
     return success_response(None, "User Removed From Task Successfully")

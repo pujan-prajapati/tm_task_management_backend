@@ -20,5 +20,7 @@ class Settings(BaseSettings):
     USE_CREDENTIALS: bool
     VALIDATE_CERTS: bool
 
+    REDIS_URL: str
+
 
 settings = Settings()
