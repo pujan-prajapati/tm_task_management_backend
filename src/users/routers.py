@@ -50,6 +50,14 @@ def login(body: LoginSchema, db: Session = Depends(get_db)):
     return controllers.login(body, db)
 
 
+# =============== login user ==============================
+@user_routes.get("/me")
+def current_user(
+    user: UserModel = Depends(is_authenticated),
+):
+    return controllers.get_current_user(user)
+
+
 # =============== upload avatar ==============================
 @user_routes.post(
     "/upload-avatar",

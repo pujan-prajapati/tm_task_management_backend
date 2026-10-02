@@ -139,6 +139,14 @@ def login(body: LoginSchema, db: Session):
     return success_response({"token": token}, "Login Successful")
 
 
+# ============= GET CURRENT USER =================================
+def get_current_user(user: UserModel):
+    return success_response(
+        data=user,
+        message="Current User Fetched Successfully",
+    )
+
+
 # ============= upload avatar =================================
 def upload_avatar(file: UploadFile, user: UserModel, db: Session):
     if user.avatar:

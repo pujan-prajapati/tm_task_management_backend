@@ -39,6 +39,7 @@ class TaskResponseSchema(BaseModel):
     description: str
     priority: TaskPriority
     status: TaskStatus
+    category_id: int | None = None
     category: CategoryResponseSchema | None = None
     user_id: int
     tags: list[TagResponseSchema] = Field(default_factory=list)

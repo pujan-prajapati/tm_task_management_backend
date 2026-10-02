@@ -116,7 +116,7 @@ def delete_task(
 @task_routes.post(
     "/{task_id}/tags",
     response_model=ResponseSchema[TaskResponseSchema],
-    status_code=status.HTTP_201_CREATED,
+    status_code=status.HTTP_200_OK,
 )
 def add_tags_to_task(
     task_id: int,
@@ -173,7 +173,7 @@ def get_task_assignees(
 
 # ================== REMOVE TASK ASSIGNEE =============================
 @task_routes.delete(
-    "/{task_id}/assignees/{user_id}",
+    "/{task_id}/assign/{user_id}",
     response_model=ResponseSchema[None],
     status_code=status.HTTP_200_OK,
 )
